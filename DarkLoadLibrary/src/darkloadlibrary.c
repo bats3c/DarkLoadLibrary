@@ -144,6 +144,7 @@ BOOL ReadFileToBuffer(
 DARKMODULE DarkLoadLibrary(
 	DWORD   dwFlags,
 	LPCWSTR lpwBuffer,
+	LPVOID	lpFileBuffer,
 	DWORD   dwLen,
 	LPCWSTR lpwName
 )
@@ -163,8 +164,15 @@ DARKMODULE DarkLoadLibrary(
 		break;
 
 	case LOAD_MEMORY:
-		dModule.ErrorMsg = L"Not implemented yet, sorry";
-		goto Cleanup;
+		dModule.dwDllDataLen = dwLen;
+		dModule.pbDllData = lpFileBuffer;
+
+		/*
+			This is probably a hack for the greater scheme but lol
+		*/
+		dModule.CrackedDLLName = lpwName;
+		dModule.LocalDLLName = lpwName;
+
 		break;
 
 	case NO_LINK:

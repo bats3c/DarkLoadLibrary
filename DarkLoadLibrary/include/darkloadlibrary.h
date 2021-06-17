@@ -18,8 +18,9 @@ typedef struct _DARKMODULE {
 } DARKMODULE, *PDARKMODULE;
 
 DARKMODULE DarkLoadLibrary(
-	DWORD  dwFlags,
+	DWORD   dwFlags,
 	LPCWSTR lpwBuffer,
-	DWORD  dwLen,
+	LPVOID	lpFileBuffer,
+	DWORD   dwLen,
 	LPCWSTR lpwName
 );

@@ -10,6 +10,7 @@ VOID main()
 	DARKMODULE DarkModule = DarkLoadLibrary(
 		LOAD_LOCAL_FILE,
 		L"TestDLL.dll",
+		NULL,
 		0,
 		NULL
 	);
