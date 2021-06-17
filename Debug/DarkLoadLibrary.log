@@ -1,8 +1,0 @@
-﻿  darkloadlibrary.c
-P:\DarkLoadLibrary\darkloadlibrary.c(49,2): error C4996: '_wsplitpath': This function or variable may be unsafe. Consider using _wsplitpath_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-P:\DarkLoadLibrary\darkloadlibrary.c(63,16): error C4996: 'wcscpy': This function or variable may be unsafe. Consider using wcscpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-P:\DarkLoadLibrary\darkloadlibrary.c(63,1): warning C4133: 'initializing': incompatible types - from 'wchar_t *' to 'PCHAR'
-P:\DarkLoadLibrary\darkloadlibrary.c(68,16): error C4996: 'wcscat': This function or variable may be unsafe. Consider using wcscat_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-P:\DarkLoadLibrary\darkloadlibrary.c(68,1): warning C4133: 'initializing': incompatible types - from 'wchar_t *' to 'PCHAR'
-P:\DarkLoadLibrary\darkloadlibrary.c(96,41): warning C4090: 'function': different 'const' qualifiers
-P:\DarkLoadLibrary\darkloadlibrary.c(127,1): warning C4113: 'FARPROC' differs in parameter lists from '_ThisIsAFunction'

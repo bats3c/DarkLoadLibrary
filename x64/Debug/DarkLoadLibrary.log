@@ -1,1 +1,0 @@
-﻿C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Microsoft\VC\v160\Microsoft.CppBuild.targets(468,5): error MSB8059: -fsanitize=address (Enable Address Sanitizer) is incompatible with option 'edit-and-continue debug information (/ZI)'.

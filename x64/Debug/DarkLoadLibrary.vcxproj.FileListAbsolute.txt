@@ -1,2 +1,0 @@
-P:\DarkLoadLibrary\x64\Debug\DarkLoadLibrary.exe
-P:\DarkLoadLibrary\x64\Debug\DarkLoadLibrary.pdb
