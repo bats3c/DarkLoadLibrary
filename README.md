@@ -12,6 +12,7 @@ https://www.mdsec.co.uk/2021/06/bypassing-image-load-kernel-callbacks/
 DARKMODULE DarkModule = DarkLoadLibrary(
     LOAD_LOCAL_FILE, // control flags
     L"TestDLL.dll", // local dll path, if loading from disk
+    NULL, // DLL Buffer to load from if loading from memory
     0, // dll size if loading from memory
     NULL // dll name if loaded from memory
 );
@@ -25,6 +26,10 @@ DARKMODULE DarkModule = DarkLoadLibrary(
 #### DLL Path:
 
 This can be any path that `CreateFileW` will open.
+
+### DLL Buffer:
+
+This argument is only needed when `LOAD_MEMORY` is set. In that case this argument should be the buffer containing the DLL.
 
 #### DLL Size:
 
