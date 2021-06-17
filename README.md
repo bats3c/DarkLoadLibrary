@@ -4,7 +4,7 @@
 
 ### How does is work?
 
-*link to blog post*
+https://www.mdsec.co.uk/2021/06/bypassing-image-load-kernel-callbacks/
 
 ### Usage
 
