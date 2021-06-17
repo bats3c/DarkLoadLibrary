@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "darkloadlibrary.h": "c",
-        "ldrutils.h": "c",
-        "pebutils.h": "c"
-    }
-}
