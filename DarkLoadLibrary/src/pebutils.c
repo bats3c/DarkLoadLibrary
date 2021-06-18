@@ -58,7 +58,7 @@ PLDR_DATA_TABLE_ENTRY2 FindLdrTableEntry(
 
 PRTL_RB_TREE FindModuleBaseAddressIndex()
 {
-	SIZE_T stEnd = NULL;
+	SIZE_T stEnd = 0;
 	PRTL_BALANCED_NODE pNode = NULL;
 	PRTL_RB_TREE pModBaseAddrIndex = NULL;
 
@@ -73,8 +73,8 @@ PRTL_RB_TREE FindModuleBaseAddressIndex()
 
 	if (!pNode->Red)
 	{
-		DWORD dwLen = NULL;
-		SIZE_T stBegin = NULL;
+		DWORD dwLen = 0;
+		SIZE_T stBegin = 0;
 
 		PIMAGE_NT_HEADERS pNtHeaders = RVA(
 			PIMAGE_NT_HEADERS, 
