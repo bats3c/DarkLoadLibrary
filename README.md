@@ -44,3 +44,43 @@ This argument is only needed when `LOAD_MEMORY` is set. In that case this argume
 The windows loader is very complex and can handle all the edge case's and intricacies of loading DLLs. There are going to be edge case's which I have not had the time to discover, reverse engineer and implement. So there's going to be DLLs that this loader simply will not work with.
 
 That being said I plan on making this loader as complete as possible, so please open issue's for DLLs that are not correctly loaded.
+
+### Example of making it work in the code:
+```
+#include <windows.h>
+#include <darkloadlibrary.h>
+
+typedef DWORD (WINAPI * _ThisIsAFunction) (LPCWSTR);
+
+VOID main()
+{
+	DARKMODULE DarkModule = DarkLoadLibrary(
+		LOAD_LOCAL_FILE,
+		L"TestDLL.dll",
+		0,
+		NULL
+	);
+
+	if (!DarkModule.bSuccess)
+	{
+		printf("Load Error: %S\n", DarkModule.ErrorMsg);
+		return;
+	}
+
+	_ThisIsAFunction ThisIsAFunction = GetProcAddress(
+		DarkModule.ModuleBase,
+		"CallThisFunction"
+	);
+
+	if (!ThisIsAFunction)
+	{
+		printf("Failed to locate function\n");
+		return;
+	}
+
+    ThisIsAFunction(L"this is working!!!");
+
+	return;
+}
+
+```
