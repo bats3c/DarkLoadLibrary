@@ -1,5 +1,5 @@
 #include <windows.h>
-
+#include <stddef.h>
 #include "pebstructs.h"
 #include "darkloadlibrary.h"
 
