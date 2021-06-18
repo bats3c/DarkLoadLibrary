@@ -58,12 +58,12 @@ BOOL ParseFileName(
 		return FALSE;
 	}
 
-	PCHAR lpCpy = wcscpy(
+	PWCHAR lpCpy = wcscpy(
 		pdModule->CrackedDLLName,
 		lpwFilename
 	);
     
-	PCHAR lpCat = wcscat(
+	PWCHAR lpCat = wcscat(
 		pdModule->CrackedDLLName,
 		lpwExt
 	);
