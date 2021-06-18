@@ -1,4 +1,5 @@
 #include <winternl.h>
+#pragma comment(lib, "ntdll.lib")
 
 #define GDI_HANDLE_BUFFER_SIZE32 34
 #define GDI_HANDLE_BUFFER_SIZE64 60

@@ -6,7 +6,7 @@
 
 https://www.mdsec.co.uk/2021/06/bypassing-image-load-kernel-callbacks/
 
-### Usage
+## Usage
 
 ```C
 DARKMODULE DarkModule = DarkLoadLibrary(
@@ -39,7 +39,18 @@ This argument is only needed when `LOAD_MEMORY` is set. In that case this argume
 
 This argument is only needed when `LOAD_MEMORY` is set. In that case this argument should be the name which the DLL should be set in the PEB under.
 
-### Considerations
+## Build
+
+```
+mkdir build
+cd build
+
+# If this fails, select a different generator. See "cmake -h"
+cmake -G "Visual Studio 16 2019" .. 
+cmake --build . --config Release
+```
+
+## Considerations
 
 The windows loader is very complex and can handle all the edge case's and intricacies of loading DLLs. There are going to be edge case's which I have not had the time to discover, reverse engineer and implement. So there's going to be DLLs that this loader simply will not work with.
 

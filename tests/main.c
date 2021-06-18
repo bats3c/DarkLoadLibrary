@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <windows.h>
 
-#include "darkloadlibrary.h"
+#include <darkloadlibrary>
 
 typedef DWORD (WINAPI * _ThisIsAFunction) (LPCWSTR);
 
@@ -34,5 +34,6 @@ VOID main()
 
     ThisIsAFunction(L"this is working!!!");
 
+	system("pause");
 	return;
 }

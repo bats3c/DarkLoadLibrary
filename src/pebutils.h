@@ -1,7 +1,7 @@
 #include <windows.h>
 
-#include "pebstructs.h"
 #include "darkloadlibrary.h"
+#include "pebstructs.h"
 
 #ifdef _WIN32
     #define PEB_OFFSET 0x30
@@ -16,6 +16,19 @@
 #pragma once
 #define RVA(type, base_addr, rva) (type)((ULONG_PTR) base_addr + rva)
 #define RtlInitializeListEntry(entry) ((entry)->Blink = (entry)->Flink = (entry))
+
+NTSTATUS RtlHashUnicodeString(
+  PCUNICODE_STRING String,
+  BOOLEAN          CaseInSensitive,
+  ULONG            HashAlgorithm,
+  PULONG           HashValue
+);
+
+VOID RtlRbInsertNodeEx (
+    RTL_RB_TREE *Tree, 
+    RTL_BALANCED_NODE *Parent, 
+    BOOLEAN Right, 
+    RTL_BALANCED_NODE *Node);
 
 #define LDRP_IMAGE_DLL 0x00000004
 #define LDRP_ENTRY_INSERTED 0x00008000
