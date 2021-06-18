@@ -58,7 +58,7 @@ PLDR_DATA_TABLE_ENTRY2 FindLdrTableEntry(
 
 PRTL_RB_TREE FindModuleBaseAddressIndex()
 {
-	SIZE_T stEnd = 0;
+	SIZE_T stEnd = NULL;
 	PRTL_BALANCED_NODE pNode = NULL;
 	PRTL_RB_TREE pModBaseAddrIndex = NULL;
 
