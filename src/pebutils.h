@@ -1,6 +1,6 @@
 #include <windows.h>
 
-#include "darkloadlibrary.h"
+#include "../include/darkloadlibrary"
 #include "pebstructs.h"
 
 #ifdef _WIN32

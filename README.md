@@ -41,6 +41,8 @@ This argument is only needed when `LOAD_MEMORY` is set. In that case this argume
 
 ## Build
 
+Compile as static library:
+
 ```
 mkdir build
 cd build

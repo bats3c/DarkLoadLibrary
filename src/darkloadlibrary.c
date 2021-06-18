@@ -1,5 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include "darkloadlibrary.h"
+#include "../include/darkloadlibrary"
 #include "ldrutils.h"
 
 BOOL ParseFileName(
