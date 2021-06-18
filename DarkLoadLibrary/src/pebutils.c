@@ -73,8 +73,8 @@ PRTL_RB_TREE FindModuleBaseAddressIndex()
 
 	if (!pNode->Red)
 	{
-		DWORD dwLen = 0;
-		SIZE_T stBegin = 0;
+		DWORD dwLen = NULL;
+		SIZE_T stBegin = NULL;
 
 		PIMAGE_NT_HEADERS pNtHeaders = RVA(
 			PIMAGE_NT_HEADERS, 
