@@ -36,24 +36,30 @@ BOOL MapSections(
     );
 
     // try get prefered address
-    pdModule->ModuleBase = (ULONG_PTR)VirtualAlloc(
-        (LPVOID)(pNtHeaders->OptionalHeader.ImageBase),
-        (SIZE_T)pNtHeaders->OptionalHeader.SizeOfImage,
+    pdModule->ModuleBase = pNtHeaders->OptionalHeader.ImageBase;
+    SIZE_T RegionSize = pNtHeaders->OptionalHeader.SizeOfImage;
+    NTSTATUS status = NtAllocateVirtualMemory(
+        (HANDLE)-1,
+        &pdModule->ModuleBase,
+        0,
+        &RegionSize,
         MEM_RESERVE | MEM_COMMIT,
         PAGE_READWRITE
-    );
-
-    if (!pdModule->ModuleBase)
+        );
+    if (!NT_SUCCESS(status) || pdModule->ModuleBase != pNtHeaders->OptionalHeader.ImageBase)
     {
-        pdModule->ModuleBase = (ULONG_PTR)VirtualAlloc(
+        pdModule->ModuleBase = NULL;
+        RegionSize = pNtHeaders->OptionalHeader.SizeOfImage;
+        status = NtAllocateVirtualMemory(
+            (HANDLE)-1,
+            &pdModule->ModuleBase,
             0,
-            (SIZE_T)pNtHeaders->OptionalHeader.SizeOfImage,
+            &RegionSize,
             MEM_RESERVE | MEM_COMMIT,
             PAGE_READWRITE
         );
     }
-
-    if (!pdModule->ModuleBase)
+    if (!NT_SUCCESS(status))
     {
         return FALSE;
     }
@@ -342,13 +348,19 @@ BOOL BeginExecution(
             {
                 dwProtect |= PAGE_NOCACHE;
             }
-
-            VirtualProtect(
-                (LPVOID)(pdModule->ModuleBase + pSectionHeader->VirtualAddress),
-                pSectionHeader->SizeOfRawData,
+            PVOID BaseAddress = pdModule->ModuleBase + pSectionHeader->VirtualAddress;
+            SIZE_T RegionSize = pSectionHeader->SizeOfRawData;
+            NTSTATUS status = NtProtectVirtualMemory(
+                (HANDLE)-1,
+                &BaseAddress,
+                &RegionSize,
                 dwProtect,
                 &dwProtect
-            );
+                );
+            if (!NT_SUCCESS(status))
+            {
+                return FALSE;
+            }
         }
     }
 

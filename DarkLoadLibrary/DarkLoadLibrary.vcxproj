@@ -152,12 +152,15 @@
     <ClCompile Include="src\ldrutils.c" />
     <ClCompile Include="src\main.c" />
     <ClCompile Include="src\pebutils.c" />
+    <ClCompile Include="src\syscalls.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\darkloadlibrary.h" />
     <ClInclude Include="include\ldrutils.h" />
     <ClInclude Include="include\pebstructs.h" />
     <ClInclude Include="include\pebutils.h" />
+    <ClInclude Include="include\syscalls.h" />
+    <ClInclude Include="include\syscallsstubs.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

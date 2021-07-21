@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include "darkloadlibrary.h"
+#include "syscalls.h"
 
 typedef DWORD (WINAPI * _ThisIsAFunction) (LPCWSTR);
 
