@@ -27,6 +27,9 @@
     <ClCompile Include="src\main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\syscalls.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\darkloadlibrary.h">
@@ -41,5 +44,13 @@
     <ClInclude Include="include\pebutils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\syscalls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="src\syscallsstubs.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
   </ItemGroup>
 </Project>

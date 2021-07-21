@@ -1,4 +1,7 @@
 #include "ldrutils.h"
+#if _M_X64
+#include "syscalls.h"
+#endif
 
 BOOL IsValidPE(
     PBYTE pbData
