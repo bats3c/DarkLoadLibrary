@@ -2,7 +2,7 @@
 
 `LoadLibrary` for offensive operations.
 
-### How does is work?
+### How does it work?
 
 https://www.mdsec.co.uk/2021/06/bypassing-image-load-kernel-callbacks/
 
