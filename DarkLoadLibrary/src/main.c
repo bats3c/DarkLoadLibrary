@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <windows.h>
 
+#include "pebutils.h"
 #include "darkloadlibrary.h"
 
 typedef DWORD (WINAPI * _ThisIsAFunction) (LPCWSTR);
@@ -21,7 +22,7 @@ VOID main()
 		return;
 	}
 
-	_ThisIsAFunction ThisIsAFunction = GetProcAddress(
+	_ThisIsAFunction ThisIsAFunction = GetFunctionAddress(
 		DarkModule.ModuleBase,
 		"CallThisFunction"
 	);

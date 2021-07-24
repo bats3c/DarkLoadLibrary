@@ -3,6 +3,11 @@
 #include "pebstructs.h"
 #include "darkloadlibrary.h"
 
+#define FILL_STRING(string, buffer) \
+    string.Length = (USHORT)strlen(buffer); \
+    string.MaximumLength = string.Length; \
+    string.Buffer = buffer
+
 #ifdef _WIN32
     #define PEB_OFFSET 0x30
     #define READ_MEMLOC __readfsdword 
@@ -26,3 +31,5 @@
 
 HMODULE IsModulePresent(LPCWSTR lpwName);
 BOOL LinkModuleToPEB(PDARKMODULE pdModule);
+FARPROC GetFunctionAddress(HMODULE hModule, LPCSTR  lpProcName);
+BOOL LocalLdrGetProcedureAddress(HMODULE hLibrary, PANSI_STRING ProcName, WORD Ordinal, PVOID* FunctionAddress);

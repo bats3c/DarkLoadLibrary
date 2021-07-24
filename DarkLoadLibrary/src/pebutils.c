@@ -336,6 +336,217 @@ HMODULE IsModulePresent(
 	return (HMODULE)NULL;
 }
 
+FARPROC GetFunctionAddress(
+	HMODULE hModule,
+	LPCSTR  lpProcName
+)
+{
+	STRING aString = { 0 };
+	FILL_STRING(
+		aString,
+		lpProcName
+	);
+
+	PVOID FunctionAddress = NULL;
+	BOOL ok = LocalLdrGetProcedureAddress(
+		hModule,
+		&aString,
+		0,
+		&FunctionAddress
+	);
+	if (!ok)
+		return NULL;
+	return FunctionAddress;
+}
+
+BOOL LocalLdrGetProcedureAddress(
+	HMODULE hLibrary,
+	PANSI_STRING ProcName,
+	WORD Ordinal,
+	PVOID* FunctionAddress
+)
+{
+	PIMAGE_NT_HEADERS pNtHeaders;
+	PIMAGE_DATA_DIRECTORY pDataDir;
+	PIMAGE_EXPORT_DIRECTORY pExpDir;
+	PIMAGE_SECTION_HEADER pSecHeader;
+
+	if (hLibrary == NULL)
+		return FALSE;
+
+	if (ProcName == NULL && Ordinal == 0)
+		return FALSE;
+
+	// choose only one
+	if (ProcName != NULL && Ordinal != 0)
+		return FALSE;
+
+	pNtHeaders = RVA(
+		PIMAGE_NT_HEADERS,
+		hLibrary,
+		((PIMAGE_DOS_HEADER)hLibrary)->e_lfanew
+	);
+
+	if (pNtHeaders->Signature != IMAGE_NT_SIGNATURE)
+		return FALSE;
+
+	// find the address range for the .text section
+	PVOID startTextSection = NULL;
+	PVOID endTextSection = NULL;
+	for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++)
+	{
+		pSecHeader = RVA(
+			PIMAGE_SECTION_HEADER,
+			&pNtHeaders->OptionalHeader,
+			pNtHeaders->FileHeader.SizeOfOptionalHeader + i * IMAGE_SIZEOF_SECTION_HEADER
+		);
+		if (strncmp(".text", pSecHeader->Name, 6) == 0)
+		{
+			startTextSection = RVA(
+				PVOID,
+				hLibrary,
+				pSecHeader->VirtualAddress
+			);
+			endTextSection = RVA(
+				PVOID,
+				startTextSection,
+				pSecHeader->SizeOfRawData
+			);
+			break;
+		}
+	}
+	if (startTextSection == NULL || endTextSection == NULL)
+		return FALSE;
+
+	pDataDir = &pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+	if (pDataDir->Size)
+	{
+		pExpDir = RVA(
+			PIMAGE_EXPORT_DIRECTORY,
+			hLibrary,
+			pDataDir->VirtualAddress
+		);
+
+		int numberOfEntries = ProcName != NULL ? pExpDir->NumberOfNames : pExpDir->NumberOfFunctions;
+		// iterate over all the exports
+		for (int i = 0; i < numberOfEntries; i++)
+		{
+			BOOL found = FALSE;
+			ULONG32 FunctionOrdinal;
+			if (ProcName != NULL)
+			{
+				// searching by name
+				ULONG32* pRVA = RVA(
+					ULONG32*,
+					hLibrary,
+					pExpDir->AddressOfNames + i * 4
+				);
+				LPCSTR functionName = RVA(
+					LPCSTR,
+					hLibrary,
+					*pRVA
+				);
+				if (strlen(functionName) != ProcName->Length)
+					continue;
+				if (strncmp(functionName, ProcName->Buffer, ProcName->Length) == 0)
+				{
+					// found it
+					found = TRUE;
+					short* pRVA2 = RVA(
+						short*,
+						hLibrary,
+						pExpDir->AddressOfNameOrdinals + i * 2
+					);
+					FunctionOrdinal = pExpDir->Base + *pRVA2;
+				}
+			}
+			else
+			{
+				// searching by ordinal
+				short* pRVA2 = RVA(
+					short*,
+					hLibrary,
+					pExpDir->AddressOfNameOrdinals + i * 2
+				);
+				FunctionOrdinal = pExpDir->Base + *pRVA2;
+				if (FunctionOrdinal == Ordinal)
+				{
+					// found it
+					found = TRUE;
+				}
+			}
+			if (found)
+			{
+				ULONG32* pFunctionRVA = RVA(
+					ULONG32*,
+					hLibrary,
+					pExpDir->AddressOfFunctions + 4 * (FunctionOrdinal - pExpDir->Base)
+				);
+				PVOID FunctionPtr = RVA(
+					PVOID,
+					hLibrary,
+					*pFunctionRVA
+				);
+
+				if (FunctionPtr < startTextSection || FunctionPtr >  endTextSection)
+				{
+					// this is not a pointer to a function, but a reference to another library with the real address
+					size_t full_length = strlen((char*)FunctionPtr);
+					int lib_length = 0;
+					for (int j = 0; j < full_length; j++)
+					{
+						if (((char*)FunctionPtr)[j] == '.')
+						{
+							lib_length = j;
+							break;
+						}
+					}
+					if (lib_length == 0)
+						return FALSE;
+					size_t func_length = full_length - lib_length - 1;
+					char* libname = HeapAlloc(
+						GetProcessHeap(),
+						HEAP_ZERO_MEMORY,
+						2 * (lib_length + 5)
+					);
+					if (!libname)
+						return FALSE;
+
+					for (int j = 0; j < lib_length; j++)
+					{
+						libname[j * 2 + 0] = ((char*)FunctionPtr)[j];
+						libname[j * 2 + 1] = 0;
+					}
+					libname[lib_length * 2 + 0] = '.'; libname[lib_length * 2 + 1] = 0;
+					libname[lib_length * 2 + 2] = 'd'; libname[lib_length * 2 + 3] = 0;
+					libname[lib_length * 2 + 4] = 'l'; libname[lib_length * 2 + 5] = 0;
+					libname[lib_length * 2 + 6] = 'l'; libname[lib_length * 2 + 7] = 0;
+					libname[lib_length * 2 + 8] = 0; libname[lib_length * 2 + 9] = 0;
+					char* funcname = (char*)FunctionPtr + lib_length + 1;
+					STRING funcname_s = { 0 };
+					FILL_STRING(
+						funcname_s,
+						funcname
+					);
+					// call ourselves recursively
+					BOOL result = LocalLdrGetProcedureAddress(
+						IsModulePresent((LPCWSTR)libname),
+						&funcname_s,
+						0,
+						&FunctionPtr
+					);
+					HeapFree(GetProcessHeap(), 0, libname); libname = NULL;
+					if (!result)
+						return FALSE;
+				}
+				*FunctionAddress = FunctionPtr;
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
 BOOL LinkModuleToPEB(
 	PDARKMODULE pdModule
 )
