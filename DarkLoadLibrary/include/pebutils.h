@@ -1,6 +1,8 @@
+#pragma once
 #include <windows.h>
-
+#include <stddef.h>
 #include "pebstructs.h"
+#include "darkmodule.h"
 #include "darkloadlibrary.h"
 
 #ifdef _WIN32
@@ -26,3 +28,34 @@
 
 HMODULE IsModulePresent(LPCWSTR lpwName);
 BOOL LinkModuleToPEB(PDARKMODULE pdModule);
+ULONG LdrHashEntry(UNICODE_STRING UniName, BOOL XorHash);
+PLDR_DATA_TABLE_ENTRY2 FindLdrTableEntry(
+	PCWSTR BaseName
+);
+PRTL_RB_TREE FindModuleBaseAddressIndex();
+BOOL AddBaseAddressEntry(
+	PLDR_DATA_TABLE_ENTRY2 pLdrEntry,
+	PVOID lpBaseAddr
+);
+PLIST_ENTRY FindHashTable();
+VOID InsertTailList(
+	PLIST_ENTRY ListHead,
+	PLIST_ENTRY Entry
+);
+BOOL AddHashTableEntry(
+	PLDR_DATA_TABLE_ENTRY2 pLdrEntry
+);
+
+NTSTATUS RtlHashUnicodeString(
+  PCUNICODE_STRING String,
+  BOOLEAN          CaseInSensitive,
+  ULONG            HashAlgorithm,
+  PULONG           HashValue
+);
+
+void RtlRbInsertNodeEx(
+    RTL_RB_TREE *Tree, 
+    RTL_BALANCED_NODE *Parent, 
+    BOOLEAN Right, 
+    RTL_BALANCED_NODE *Node
+);
