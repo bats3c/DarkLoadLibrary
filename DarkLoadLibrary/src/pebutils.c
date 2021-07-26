@@ -58,7 +58,7 @@ PLDR_DATA_TABLE_ENTRY2 FindLdrTableEntry(
 
 PRTL_RB_TREE FindModuleBaseAddressIndex()
 {
-	SIZE_T stEnd = NULL;
+	SIZE_T stEnd = 0;
 	PRTL_BALANCED_NODE pNode = NULL;
 	PRTL_RB_TREE pModBaseAddrIndex = NULL;
 
@@ -73,8 +73,8 @@ PRTL_RB_TREE FindModuleBaseAddressIndex()
 
 	if (!pNode->Red)
 	{
-		DWORD dwLen = NULL;
-		SIZE_T stBegin = NULL;
+		DWORD dwLen = 0;
+		SIZE_T stBegin = 0;
 
 		PIMAGE_NT_HEADERS pNtHeaders = RVA(
 			PIMAGE_NT_HEADERS, 
@@ -113,7 +113,7 @@ PRTL_RB_TREE FindModuleBaseAddressIndex()
 			}
 		}
 
-		if (stEnd == NULL)
+		if (stEnd == 0)
 		{
 			return NULL;
 		}
@@ -299,6 +299,15 @@ BOOL AddHashTableEntry(
 	return TRUE;
 }
 
+HMODULE IsModulePresentA(
+	char* Name
+)
+{
+	wchar_t wtext[500];
+	mbstowcs(wtext, Name, strlen(Name) + 1);
+	return IsModulePresent(wtext);
+}
+
 HMODULE IsModulePresent(
 	LPCWSTR lpwName
 )
@@ -327,7 +336,7 @@ HMODULE IsModulePresent(
 		)
 		{
 			// already loaded, so return the base address
-			return (ULONG_PTR)pLdrTbl->DllBase;
+			return (HMODULE)pLdrTbl->DllBase;
 		}
 
 		pModList = pModList->Flink;
@@ -338,13 +347,13 @@ HMODULE IsModulePresent(
 
 FARPROC GetFunctionAddress(
 	HMODULE hModule,
-	LPCSTR  lpProcName
+	char*  ProcName
 )
 {
 	STRING aString = { 0 };
 	FILL_STRING(
 		aString,
-		lpProcName
+		ProcName
 	);
 
 	PVOID FunctionAddress = NULL;
@@ -366,19 +375,78 @@ BOOL LocalLdrGetProcedureAddress(
 	PVOID* FunctionAddress
 )
 {
+	if (ProcName == NULL && Ordinal == 0)
+	{
+		printf("LocalLdrGetProcedureAddress: provide either a Function name or Ordinal\n");
+		return FALSE;
+	}
+
+	if (ProcName != NULL && Ordinal != 0)
+	{
+		printf("LocalLdrGetProcedureAddress: provide Function name or Ordinal, not both\n");
+		return FALSE;
+	}
+
+	BOOL ok = FALSE;
+	if (hLibrary != NULL)
+	{
+		ok = _LocalLdrGetProcedureAddress(
+			hLibrary,
+			ProcName,
+			Ordinal,
+			FunctionAddress
+		);
+		if (ok)
+			return TRUE;
+	}
+
+	// some deprecated DLLs have their functions implemented in KERNEL32 and KERNELBASE
+	PVOID kernel32_addr = IsModulePresent(L"KERNEL32.dll");
+	if (kernel32_addr != hLibrary)
+	{
+		ok = _LocalLdrGetProcedureAddress(
+			kernel32_addr,
+			ProcName,
+			Ordinal,
+			FunctionAddress
+		);
+	}
+	if (ok)
+		return TRUE;
+
+	PVOID kernelbase_addr = IsModulePresent(L"KERNELBASE.dll");
+	if (kernelbase_addr != hLibrary)
+	{
+		ok = _LocalLdrGetProcedureAddress(
+			kernelbase_addr,
+			ProcName,
+			Ordinal,
+			FunctionAddress
+		);
+	}
+	if (ok)
+		return TRUE;
+
+	if (ProcName != NULL)
+		printf("LocalLdrGetProcedureAddress: unable to resolve address of function: %s\n", ProcName->Buffer);
+	else
+		printf("LocalLdrGetProcedureAddress: unable to resolve address of function ordinal: %d\n", Ordinal);
+	return FALSE;
+}
+
+BOOL _LocalLdrGetProcedureAddress(
+	HMODULE hLibrary,
+	PANSI_STRING ProcName,
+	WORD Ordinal,
+	PVOID* FunctionAddress
+)
+{
 	PIMAGE_NT_HEADERS pNtHeaders;
 	PIMAGE_DATA_DIRECTORY pDataDir;
 	PIMAGE_EXPORT_DIRECTORY pExpDir;
 	PIMAGE_SECTION_HEADER pSecHeader;
 
 	if (hLibrary == NULL)
-		return FALSE;
-
-	if (ProcName == NULL && Ordinal == 0)
-		return FALSE;
-
-	// choose only one
-	if (ProcName != NULL && Ordinal != 0)
 		return FALSE;
 
 	pNtHeaders = RVA(
@@ -388,11 +456,15 @@ BOOL LocalLdrGetProcedureAddress(
 	);
 
 	if (pNtHeaders->Signature != IMAGE_NT_SIGNATURE)
+	{
+		printf("LocalLdrGetProcedureAddress: invalid IMAGE_NT_SIGNATURE\n");
 		return FALSE;
+	}
 
 	// find the address range for the .text section
-	PVOID startTextSection = NULL;
-	PVOID endTextSection = NULL;
+	PVOID startValidSection = NULL;
+	PVOID endValidSection = NULL;
+
 	for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++)
 	{
 		pSecHeader = RVA(
@@ -402,20 +474,20 @@ BOOL LocalLdrGetProcedureAddress(
 		);
 		if (strncmp(".text", pSecHeader->Name, 6) == 0)
 		{
-			startTextSection = RVA(
+			startValidSection = RVA(
 				PVOID,
 				hLibrary,
 				pSecHeader->VirtualAddress
 			);
-			endTextSection = RVA(
+			endValidSection = RVA(
 				PVOID,
-				startTextSection,
+				startValidSection,
 				pSecHeader->SizeOfRawData
 			);
 			break;
 		}
 	}
-	if (startTextSection == NULL || endTextSection == NULL)
+	if (startValidSection == NULL || endValidSection == NULL)
 		return FALSE;
 
 	pDataDir = &pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
@@ -488,7 +560,7 @@ BOOL LocalLdrGetProcedureAddress(
 					*pFunctionRVA
 				);
 
-				if (FunctionPtr < startTextSection || FunctionPtr >  endTextSection)
+				if (startValidSection > FunctionPtr || FunctionPtr > endValidSection)
 				{
 					// this is not a pointer to a function, but a reference to another library with the real address
 					size_t full_length = strlen((char*)FunctionPtr);
@@ -501,43 +573,48 @@ BOOL LocalLdrGetProcedureAddress(
 							break;
 						}
 					}
-					if (lib_length == 0)
-						return FALSE;
-					size_t func_length = full_length - lib_length - 1;
-					char* libname = HeapAlloc(
-						GetProcessHeap(),
-						HEAP_ZERO_MEMORY,
-						2 * (lib_length + 5)
-					);
-					if (!libname)
-						return FALSE;
-
-					for (int j = 0; j < lib_length; j++)
+					if (lib_length != 0)
 					{
-						libname[j * 2 + 0] = ((char*)FunctionPtr)[j];
-						libname[j * 2 + 1] = 0;
+
+						size_t func_length = full_length - lib_length - 1;
+						char* libname = HeapAlloc(
+							GetProcessHeap(),
+							HEAP_ZERO_MEMORY,
+							lib_length + 5
+						);
+						if (!libname)
+							return FALSE;
+						strncpy(libname, (char*)FunctionPtr, lib_length);
+						strncpy(libname + lib_length, ".dll", 5);
+						char* funcname = (char*)FunctionPtr + lib_length + 1;
+						STRING funcname_s = { 0 };
+						FILL_STRING(
+							funcname_s,
+							funcname
+						);
+						PVOID lib_addr = IsModulePresentA(libname);
+						if (lib_addr == NULL || lib_addr == hLibrary)
+						{
+							HeapFree(GetProcessHeap(), 0, libname); libname = NULL;
+							return FALSE;
+						}
+
+						// call ourselves recursively
+						BOOL ok = FALSE;
+						ok = LocalLdrGetProcedureAddress(
+							lib_addr,
+							&funcname_s,
+							0,
+							&FunctionPtr
+						);
+						if (!ok)
+						{
+							printf("LocalLdrGetProcedureAddress: failed to resolve address of: %s!%s\n", libname, funcname);
+							HeapFree(GetProcessHeap(), 0, libname); libname = NULL;
+							return FALSE;
+						}
+						HeapFree(GetProcessHeap(), 0, libname); libname = NULL;
 					}
-					libname[lib_length * 2 + 0] = '.'; libname[lib_length * 2 + 1] = 0;
-					libname[lib_length * 2 + 2] = 'd'; libname[lib_length * 2 + 3] = 0;
-					libname[lib_length * 2 + 4] = 'l'; libname[lib_length * 2 + 5] = 0;
-					libname[lib_length * 2 + 6] = 'l'; libname[lib_length * 2 + 7] = 0;
-					libname[lib_length * 2 + 8] = 0; libname[lib_length * 2 + 9] = 0;
-					char* funcname = (char*)FunctionPtr + lib_length + 1;
-					STRING funcname_s = { 0 };
-					FILL_STRING(
-						funcname_s,
-						funcname
-					);
-					// call ourselves recursively
-					BOOL result = LocalLdrGetProcedureAddress(
-						IsModulePresent((LPCWSTR)libname),
-						&funcname_s,
-						0,
-						&FunctionPtr
-					);
-					HeapFree(GetProcessHeap(), 0, libname); libname = NULL;
-					if (!result)
-						return FALSE;
 				}
 				*FunctionAddress = FunctionPtr;
 				return TRUE;
@@ -601,7 +678,7 @@ BOOL LinkModuleToPEB(
 	// correctly add the base address to the entry
 	AddBaseAddressEntry(
 		pLdrEntry,
-		pdModule->ModuleBase
+		(PVOID)pdModule->ModuleBase
 	);
 
 	// an the rest

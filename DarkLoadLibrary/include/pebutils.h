@@ -8,14 +8,12 @@
     string.MaximumLength = string.Length; \
     string.Buffer = buffer
 
-#ifdef _WIN32
-    #define PEB_OFFSET 0x30
-    #define READ_MEMLOC __readfsdword 
-#endif
-
 #ifdef _WIN64
     #define PEB_OFFSET 0x60
     #define READ_MEMLOC __readgsqword 
+#else
+#define PEB_OFFSET 0x30
+#define READ_MEMLOC __readfsdword
 #endif
 
 #pragma once
@@ -30,6 +28,7 @@
 #define LDR_HASH_TABLE_ENTRIES 32
 
 HMODULE IsModulePresent(LPCWSTR lpwName);
+HMODULE IsModulePresentA(char* Name);
 BOOL LinkModuleToPEB(PDARKMODULE pdModule);
-FARPROC GetFunctionAddress(HMODULE hModule, LPCSTR  lpProcName);
+FARPROC GetFunctionAddress(HMODULE hModule, char*  ProcName);
 BOOL LocalLdrGetProcedureAddress(HMODULE hLibrary, PANSI_STRING ProcName, WORD Ordinal, PVOID* FunctionAddress);
