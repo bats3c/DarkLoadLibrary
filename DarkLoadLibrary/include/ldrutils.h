@@ -13,4 +13,3 @@ BOOL MapSections(PDARKMODULE pdModule);
 BOOL ResolveImports(PDARKMODULE pdModule);
 BOOL LinkModuleToPEB(PDARKMODULE pdModule);
 BOOL BeginExecution(PDARKMODULE pdModule);
-wchar_t* FindDLLPath(wchar_t* path, wchar_t* libname_w);
