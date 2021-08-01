@@ -44,7 +44,7 @@ BOOL MapSections(
     SIZE_T RegionSize = pNtHeaders->OptionalHeader.SizeOfImage;
     NTSTATUS status = NtAllocateVirtualMemory(
         (HANDLE)-1,
-        &pdModule->ModuleBase,
+        (PVOID)&pdModule->ModuleBase,
         0,
         &RegionSize,
         MEM_RESERVE | MEM_COMMIT,
@@ -52,11 +52,11 @@ BOOL MapSections(
     );
     if (!NT_SUCCESS(status) || pdModule->ModuleBase != pNtHeaders->OptionalHeader.ImageBase)
     {
-        pdModule->ModuleBase = NULL;
+        pdModule->ModuleBase = 0;
         RegionSize = pNtHeaders->OptionalHeader.SizeOfImage;
         status = NtAllocateVirtualMemory(
             (HANDLE)-1,
-            &pdModule->ModuleBase,
+            (PVOID)&pdModule->ModuleBase,
             0,
             &RegionSize,
             MEM_RESERVE | MEM_COMMIT,
@@ -91,7 +91,7 @@ BOOL MapSections(
     }
 #endif
     // copy across the headers
-    for (INT i = 0; i < pNtHeaders->OptionalHeader.SizeOfHeaders; i++)
+    for (DWORD i = 0; i < pNtHeaders->OptionalHeader.SizeOfHeaders; i++)
     {
         ((PBYTE)pdModule->ModuleBase)[i] = ((PBYTE)pdModule->pbDllData)[i];
     }
@@ -99,9 +99,9 @@ BOOL MapSections(
     // copy across the sections
     pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
 
-    for (INT i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++, pSectionHeader++)
+    for (DWORD i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++, pSectionHeader++)
     {
-        for (INT j = 0; j < pSectionHeader->SizeOfRawData; j++)
+        for (DWORD j = 0; j < pSectionHeader->SizeOfRawData; j++)
         {
             ((PBYTE)(pdModule->ModuleBase + pSectionHeader->VirtualAddress))[j] = ((PBYTE)(pdModule->pbDllData + pSectionHeader->PointerToRawData))[j];
         }
@@ -150,6 +150,7 @@ BOOL MapSections(
 
         } while (pRelocation->VirtualAddress);
     }
+    pNtHeaders->OptionalHeader.ImageBase = pdModule->ModuleBase; // set the prefered base to the real base
 
     return TRUE;
 }
@@ -165,6 +166,11 @@ BOOL ResolveImports(
     PIMAGE_DELAYLOAD_DESCRIPTOR pDelayDesc;
     PIMAGE_THUNK_DATA pFirstThunk, pOrigFirstThunk;
     BOOL ok;
+
+    LOADLIBRARYA pLoadLibraryA = (LOADLIBRARYA)GetFunctionAddress(
+        IsModulePresentA("Kernel32.dll"),
+        "LoadLibraryA"
+    );
 
     STRING aString = { 0 };
 
@@ -202,9 +208,15 @@ BOOL ResolveImports(
         {
             // use LoadLibraryA for the time being.
             // make this recursive in the future.
-            HMODULE hLibrary = LoadLibraryA(
-                (LPSTR)(pdModule->ModuleBase + pImportDesc->Name)
+            HMODULE hLibrary = IsModulePresentA(
+                (char*)(pdModule->ModuleBase + pImportDesc->Name)
             );
+            if (hLibrary == NULL)
+            {
+                hLibrary = pLoadLibraryA(
+                    (LPSTR)(pdModule->ModuleBase + pImportDesc->Name)
+                );
+            }
 
             pFirstThunk = RVA(
                 PIMAGE_THUNK_DATA,
@@ -271,7 +283,15 @@ BOOL ResolveImports(
         {
             // use LoadLibraryA for the time being.
             // make this recursive in the future.
-            HMODULE hLibrary = LoadLibraryA((LPSTR)(pdModule->ModuleBase + pDelayDesc->DllNameRVA));
+            HMODULE hLibrary = IsModulePresentA(
+                (char*)(pdModule->ModuleBase + pDelayDesc->DllNameRVA)
+            );
+            if (hLibrary == NULL)
+            {
+                hLibrary = pLoadLibraryA(
+                    (LPSTR)(pdModule->ModuleBase + pDelayDesc->DllNameRVA)
+                );
+            }
 
             pFirstThunk = RVA(
                 PIMAGE_THUNK_DATA,
@@ -337,7 +357,7 @@ BOOL BeginExecution(
     PIMAGE_DATA_DIRECTORY pDataDir;
     PIMAGE_TLS_CALLBACK* ppCallback;
     PIMAGE_SECTION_HEADER pSectionHeader;
-    PIMAGE_RUNTIME_FUNCTION_ENTRY pFuncEntry;
+    //PIMAGE_RUNTIME_FUNCTION_ENTRY pFuncEntry;
 
     DLLMAIN DllMain = NULL;
 
@@ -372,7 +392,7 @@ BOOL BeginExecution(
                 dwProtect |= PAGE_NOCACHE;
             }
 #if _M_X64
-            PVOID BaseAddress = pdModule->ModuleBase + pSectionHeader->VirtualAddress;
+            PVOID BaseAddress = (PVOID)(pdModule->ModuleBase + pSectionHeader->VirtualAddress);
             SIZE_T RegionSize = pSectionHeader->SizeOfRawData;
             NTSTATUS status = NtProtectVirtualMemory(
                 (HANDLE)-1,
@@ -438,6 +458,10 @@ BOOL BeginExecution(
     //     }
     // #endif
 
+    // some DLLs don't have an entry point
+    if (pNtHeaders->OptionalHeader.AddressOfEntryPoint == 0)
+        return TRUE;
+
     // call the image entry point
     DllMain = RVA(
         DLLMAIN,
@@ -445,11 +469,11 @@ BOOL BeginExecution(
         pNtHeaders->OptionalHeader.AddressOfEntryPoint
     );
 
-    DllMain(
+    BOOL ok = DllMain(
         (HINSTANCE)pdModule->ModuleBase,
         DLL_PROCESS_ATTACH,
         (LPVOID)NULL
     );
 
-    return TRUE;
+    return ok;
 }

@@ -8,12 +8,15 @@
     string.MaximumLength = string.Length; \
     string.Buffer = buffer
 
+typedef NTSTATUS(WINAPI* LDRGETPROCADDRESS)(HMODULE, PANSI_STRING, WORD, PVOID*);
+typedef VOID(WINAPI* RTLRBINSERTNODEEX)(_In_ PRTL_RB_TREE Tree, _In_opt_ PRTL_BALANCED_NODE Parent, _In_ BOOLEAN Right, _Out_ PRTL_BALANCED_NODE Node);
+
 #ifdef _WIN64
     #define PEB_OFFSET 0x60
     #define READ_MEMLOC __readgsqword 
 #else
 #define PEB_OFFSET 0x30
-#define READ_MEMLOC __readfsdword
+#define READ_MEMLOC __readfsdword 
 #endif
 
 #pragma once
@@ -27,8 +30,12 @@
 
 #define LDR_HASH_TABLE_ENTRIES 32
 
+NTSYSAPI NTSTATUS NTAPI RtlHashUnicodeString(__in PCUNICODE_STRING String, __in BOOLEAN CaseInSensitive, __in ULONG HashAlgorithm, __out PULONG HashValue);
+NTSYSAPI VOID NTAPI RtlRbInsertNodeEx(_In_ PRTL_RB_TREE Tree, _In_opt_ PRTL_BALANCED_NODE Parent, _In_ BOOLEAN Right, _Out_ PRTL_BALANCED_NODE Node);
+
 HMODULE IsModulePresent(LPCWSTR lpwName);
 HMODULE IsModulePresentA(char* Name);
 BOOL LinkModuleToPEB(PDARKMODULE pdModule);
 FARPROC GetFunctionAddress(HMODULE hModule, char*  ProcName);
 BOOL LocalLdrGetProcedureAddress(HMODULE hLibrary, PANSI_STRING ProcName, WORD Ordinal, PVOID* FunctionAddress);
+BOOL _LocalLdrGetProcedureAddress(HMODULE hLibrary, PANSI_STRING ProcName, WORD Ordinal, PVOID* FunctionAddress);

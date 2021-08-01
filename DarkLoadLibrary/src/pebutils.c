@@ -173,10 +173,13 @@ BOOL AddBaseAddressEntry(
 		{
 			pLdrNode->DdagNode->LoadCount++;
 		}
-
 	} while (TRUE);
 
-	RtlRbInsertNodeEx(pModBaseAddrIndex, &pLdrNode->BaseAddressIndexNode, bRight, &pLdrEntry->BaseAddressIndexNode);
+	RTLRBINSERTNODEEX pRtlRbInsertNodeEx = (RTLRBINSERTNODEEX)GetFunctionAddress(
+		IsModulePresent(L"ntdll.dll"),
+		"RtlRbInsertNodeEx"
+	);
+	pRtlRbInsertNodeEx(pModBaseAddrIndex, &pLdrNode->BaseAddressIndexNode, bRight, &pLdrEntry->BaseAddressIndexNode);
 
 	return TRUE;
 }
@@ -427,11 +430,28 @@ BOOL LocalLdrGetProcedureAddress(
 	if (ok)
 		return TRUE;
 
-	if (ProcName != NULL)
-		printf("LocalLdrGetProcedureAddress: unable to resolve address of function: %s\n", ProcName->Buffer);
-	else
-		printf("LocalLdrGetProcedureAddress: unable to resolve address of function ordinal: %d\n", Ordinal);
-	return FALSE;
+	//printf("Using fallback LdrGetProcedureAddress for resolving an unknown function address\n");
+
+	*FunctionAddress = NULL;
+	LDRGETPROCADDRESS pLdrGetProcedureAddress = NULL;
+	STRING funcname_s = { 0 };
+	FILL_STRING(
+		funcname_s,
+		"LdrGetProcedureAddress"
+	);
+	_LocalLdrGetProcedureAddress(
+		IsModulePresent(L"ntdll.dll"),
+		&funcname_s,
+		0,
+		(PVOID*)&pLdrGetProcedureAddress
+	);
+	pLdrGetProcedureAddress(
+		hLibrary,
+		ProcName,
+		Ordinal,
+		FunctionAddress
+	);
+	return *FunctionAddress != NULL;
 }
 
 BOOL _LocalLdrGetProcedureAddress(
@@ -681,7 +701,7 @@ BOOL LinkModuleToPEB(
 		(PVOID)pdModule->ModuleBase
 	);
 
-	// an the rest
+	// and the rest
 	pLdrEntry->ImageDll              = TRUE;
 	pLdrEntry->LoadNotificationsSent = TRUE; // lol
 	pLdrEntry->EntryProcessed        = TRUE;
