@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <windows.h>
 
+#include "pebutils.h"
 #include "darkloadlibrary.h"
 
 typedef DWORD (WINAPI * _ThisIsAFunction) (LPCWSTR);
 
 VOID main()
 {
-	DARKMODULE DarkModule = DarkLoadLibrary(
+	PDARKMODULE DarkModule = DarkLoadLibrary(
 		LOAD_LOCAL_FILE,
 		L"TestDLL.dll",
 		NULL,
@@ -15,16 +16,19 @@ VOID main()
 		NULL
 	);
 
-	if (!DarkModule.bSuccess)
+	if (!DarkModule->bSuccess)
 	{
-		printf("load failed: %S\n", DarkModule.ErrorMsg);
+		printf("load failed: %S\n", DarkModule->ErrorMsg);
+		HeapFree(GetProcessHeap(), 0, DarkModule->ErrorMsg);
+		HeapFree(GetProcessHeap(), 0, DarkModule);
 		return;
 	}
 
-	_ThisIsAFunction ThisIsAFunction = GetProcAddress(
-		DarkModule.ModuleBase,
+	_ThisIsAFunction ThisIsAFunction = (_ThisIsAFunction)GetFunctionAddress(
+		(HMODULE)DarkModule->ModuleBase,
 		"CallThisFunction"
 	);
+	HeapFree(GetProcessHeap(), 0, DarkModule);
 
 	if (!ThisIsAFunction)
 	{

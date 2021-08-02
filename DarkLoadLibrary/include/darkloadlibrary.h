@@ -13,11 +13,11 @@ typedef struct _DARKMODULE {
 	PBYTE	  pbDllData;
 	DWORD	  dwDllDataLen;
 	LPWSTR    LocalDLLName;
-	PWCHAR 	  CrackedDLLName;
+	PWCHAR CrackedDLLName;
     ULONG_PTR ModuleBase;
 } DARKMODULE, *PDARKMODULE;
 
-DARKMODULE DarkLoadLibrary(
+PDARKMODULE DarkLoadLibrary(
 	DWORD   dwFlags,
 	LPCWSTR lpwBuffer,
 	LPVOID	lpFileBuffer,
