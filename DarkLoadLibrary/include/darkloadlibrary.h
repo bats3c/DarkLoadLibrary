@@ -4,7 +4,7 @@
 #define LOAD_LOCAL_FILE  0x00000001
 #define LOAD_REMOTE_FILE 0x00000002
 #define LOAD_MEMORY		 0x00000003
-#define NO_LINK			 0x00000004
+#define NO_LINK			 0x00010000
 
 #pragma once
 typedef struct _DARKMODULE {
@@ -15,6 +15,7 @@ typedef struct _DARKMODULE {
 	LPWSTR    LocalDLLName;
 	PWCHAR CrackedDLLName;
     ULONG_PTR ModuleBase;
+	BOOL		bLinkedToPeb;
 } DARKMODULE, *PDARKMODULE;
 
 PDARKMODULE DarkLoadLibrary(

@@ -151,11 +151,14 @@ PDARKMODULE DarkLoadLibrary(
 )
 {
 	PDARKMODULE dModule = (DARKMODULE*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(DARKMODULE));
+	if (!dModule)
+		return NULL;
 
 	dModule->bSuccess = FALSE;
+	dModule->bLinkedToPeb = TRUE;
 
 	// get the DLL data into memory, whatever the format it's in
-	switch (dwFlags)
+	switch (LOWORD(dwFlags))
 	{
 	case LOAD_LOCAL_FILE:
 		if (!ParseFileName(dModule, lpwBuffer) || !ReadFileToBuffer(dModule))
@@ -174,16 +177,17 @@ PDARKMODULE DarkLoadLibrary(
 		dModule->CrackedDLLName = lpwName;
 		dModule->LocalDLLName = lpwName;
 
-		break;
+		if (lpwName == NULL)
+			goto Cleanup;
 
-	case NO_LINK:
-		dModule->ErrorMsg = L"Not implemented yet, sorry";
-		goto Cleanup;
 		break;
 
 	default:
 		break;
 	}
+
+	if (dwFlags & NO_LINK)
+		dModule->bLinkedToPeb = FALSE;
 
 	// is there a module with the same name already loaded
 	if (lpwName == NULL)
@@ -207,6 +211,9 @@ PDARKMODULE DarkLoadLibrary(
 	if (!IsValidPE(dModule->pbDllData))
 	{
 		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		if (!dModule->ErrorMsg)
+			goto Cleanup;
+
 		wcscat(dModule->ErrorMsg, L"Data is an invalid PE: ");
 		wcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
@@ -216,6 +223,9 @@ PDARKMODULE DarkLoadLibrary(
 	if (!MapSections(dModule))
 	{
 		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		if (!dModule->ErrorMsg)
+			goto Cleanup;
+
 		wcscat(dModule->ErrorMsg, L"Failed to map sections: ");
 		wcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
@@ -225,24 +235,36 @@ PDARKMODULE DarkLoadLibrary(
 	if (!ResolveImports(dModule))
 	{
 		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		if (!dModule->ErrorMsg)
+			goto Cleanup;
+
 		wcscat(dModule->ErrorMsg, L"Failed to resolve imports: ");
 		wcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
 	}
 
 	// link the module to the PEB
-	if (!LinkModuleToPEB(dModule))
+	if (dModule->bLinkedToPeb)
 	{
-		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
-		wcscat(dModule->ErrorMsg, L"Failed to link module to PEB: ");
-		wcscat(dModule->ErrorMsg, lpwName);
-		goto Cleanup;
+		if (!LinkModuleToPEB(dModule))
+		{
+			dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+			if (!dModule->ErrorMsg)
+				goto Cleanup;
+			
+			wcscat(dModule->ErrorMsg, L"Failed to link module to PEB: ");
+			wcscat(dModule->ErrorMsg, lpwName);
+			goto Cleanup;
+		}
 	}
 
 	// trigger tls callbacks, set permissions and call the entry point
 	if (!BeginExecution(dModule))
 	{
 		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		if (!dModule->ErrorMsg)
+			goto Cleanup;
+
 		wcscat(dModule->ErrorMsg, L"Failed to execute: ");
 		wcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
