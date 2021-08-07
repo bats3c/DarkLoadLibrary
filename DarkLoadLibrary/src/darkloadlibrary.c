@@ -151,6 +151,8 @@ PDARKMODULE DarkLoadLibrary(
 )
 {
 	PDARKMODULE dModule = (DARKMODULE*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(DARKMODULE));
+	if (!dModule)
+		return NULL;
 
 	dModule->bSuccess = FALSE;
 	dModule->bLinkedToPeb = TRUE;
@@ -174,6 +176,9 @@ PDARKMODULE DarkLoadLibrary(
 		*/
 		dModule->CrackedDLLName = lpwName;
 		dModule->LocalDLLName = lpwName;
+
+		if (lpwName == NULL)
+			goto Cleanup;
 
 		break;
 
@@ -206,6 +211,9 @@ PDARKMODULE DarkLoadLibrary(
 	if (!IsValidPE(dModule->pbDllData))
 	{
 		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		if (!dModule->ErrorMsg)
+			goto Cleanup;
+
 		wcscat(dModule->ErrorMsg, L"Data is an invalid PE: ");
 		wcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
@@ -215,6 +223,9 @@ PDARKMODULE DarkLoadLibrary(
 	if (!MapSections(dModule))
 	{
 		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		if (!dModule->ErrorMsg)
+			goto Cleanup;
+
 		wcscat(dModule->ErrorMsg, L"Failed to map sections: ");
 		wcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
@@ -224,6 +235,9 @@ PDARKMODULE DarkLoadLibrary(
 	if (!ResolveImports(dModule))
 	{
 		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		if (!dModule->ErrorMsg)
+			goto Cleanup;
+
 		wcscat(dModule->ErrorMsg, L"Failed to resolve imports: ");
 		wcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
@@ -235,6 +249,9 @@ PDARKMODULE DarkLoadLibrary(
 		if (!LinkModuleToPEB(dModule))
 		{
 			dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+			if (!dModule->ErrorMsg)
+				goto Cleanup;
+			
 			wcscat(dModule->ErrorMsg, L"Failed to link module to PEB: ");
 			wcscat(dModule->ErrorMsg, lpwName);
 			goto Cleanup;
@@ -245,6 +262,9 @@ PDARKMODULE DarkLoadLibrary(
 	if (!BeginExecution(dModule))
 	{
 		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		if (!dModule->ErrorMsg)
+			goto Cleanup;
+
 		wcscat(dModule->ErrorMsg, L"Failed to execute: ");
 		wcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
