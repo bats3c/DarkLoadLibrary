@@ -9,7 +9,7 @@ typedef DWORD (WINAPI * _ThisIsAFunction) (LPCWSTR);
 VOID main()
 {
 	PDARKMODULE DarkModule = DarkLoadLibrary(
-		LOAD_LOCAL_FILE,
+		LOAD_LOCAL_FILE | NO_LINK,
 		L"TestDLL.dll",
 		NULL,
 		0,

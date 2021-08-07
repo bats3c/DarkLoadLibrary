@@ -153,9 +153,10 @@ PDARKMODULE DarkLoadLibrary(
 	PDARKMODULE dModule = (DARKMODULE*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(DARKMODULE));
 
 	dModule->bSuccess = FALSE;
+	dModule->bLinkedToPeb = TRUE;
 
 	// get the DLL data into memory, whatever the format it's in
-	switch (dwFlags)
+	switch (LOWORD(dwFlags))
 	{
 	case LOAD_LOCAL_FILE:
 		if (!ParseFileName(dModule, lpwBuffer) || !ReadFileToBuffer(dModule))
@@ -176,14 +177,12 @@ PDARKMODULE DarkLoadLibrary(
 
 		break;
 
-	case NO_LINK:
-		dModule->ErrorMsg = L"Not implemented yet, sorry";
-		goto Cleanup;
-		break;
-
 	default:
 		break;
 	}
+
+	if (dwFlags & NO_LINK)
+		dModule->bLinkedToPeb = FALSE;
 
 	// is there a module with the same name already loaded
 	if (lpwName == NULL)
@@ -231,12 +230,15 @@ PDARKMODULE DarkLoadLibrary(
 	}
 
 	// link the module to the PEB
-	if (!LinkModuleToPEB(dModule))
+	if (dModule->bLinkedToPeb)
 	{
-		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
-		wcscat(dModule->ErrorMsg, L"Failed to link module to PEB: ");
-		wcscat(dModule->ErrorMsg, lpwName);
-		goto Cleanup;
+		if (!LinkModuleToPEB(dModule))
+		{
+			dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+			wcscat(dModule->ErrorMsg, L"Failed to link module to PEB: ");
+			wcscat(dModule->ErrorMsg, lpwName);
+			goto Cleanup;
+		}
 	}
 
 	// trigger tls callbacks, set permissions and call the entry point
