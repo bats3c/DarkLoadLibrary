@@ -6,6 +6,12 @@ BOOL ParseFileName(
 	LPWSTR lpwFileName
 )
 {
+	HEAPALLOC pHeapAlloc = (HEAPALLOC)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "HeapAlloc");
+	GETPROCESSHEAP pGetProcessHeap = (GETPROCESSHEAP)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "GetProcessHeap");
+	_WSPLITPATH p_wsplitpath = (_WSPLITPATH)GetFunctionAddress(IsModulePresent(L"ucrtbased.dll"), "_wsplitpath");
+	WCSCPY pwcscpy = (WCSCPY)GetFunctionAddress(IsModulePresent(L"ucrtbased.dll"), "wcscpy");
+	WCSCAT pwcscat = (WCSCAT)GetFunctionAddress(IsModulePresent(L"ucrtbased.dll"), "wcscat");
+
 	if (lpwFileName == NULL)
 	{
 		pdModule->ErrorMsg = L"Invalid filename";
@@ -14,26 +20,26 @@ BOOL ParseFileName(
 
 	pdModule->LocalDLLName = lpwFileName;
 
-	HANDLE hHeap = GetProcessHeap();
+	HANDLE hHeap = pGetProcessHeap();
 	if (!hHeap)
 	{
 		pdModule->ErrorMsg = L"Failed to find valid heap";
 		return FALSE;
 	}
 
-	pdModule->CrackedDLLName = (PWCHAR)HeapAlloc(
+	pdModule->CrackedDLLName = (PWCHAR)pHeapAlloc(
 		hHeap,
 		HEAP_ZERO_MEMORY,
 		MAX_PATH * 2
 	);
 
-	PWCHAR lpwExt = (PWCHAR)HeapAlloc(
+	PWCHAR lpwExt = (PWCHAR)pHeapAlloc(
 		hHeap,
 		HEAP_ZERO_MEMORY,
 		MAX_PATH
 	);
 
-	PWCHAR lpwFilename = (PWCHAR)HeapAlloc(
+	PWCHAR lpwFilename = (PWCHAR)pHeapAlloc(
 		hHeap,
 		HEAP_ZERO_MEMORY,
 		MAX_PATH
@@ -45,7 +51,7 @@ BOOL ParseFileName(
 		return FALSE;
 	}
 
-	_wsplitpath(
+	p_wsplitpath(
         lpwFileName,
         NULL,
         NULL,
@@ -59,12 +65,12 @@ BOOL ParseFileName(
 		return FALSE;
 	}
 
-	PCHAR lpCpy = (PCHAR)wcscpy(
+	PCHAR lpCpy = (PCHAR)pwcscpy(
 		pdModule->CrackedDLLName,
 		lpwFilename
 	);
     
-	PCHAR lpCat = (PCHAR)wcscat(
+	PCHAR lpCat = (PCHAR)pwcscat(
 		pdModule->CrackedDLLName,
 		lpwExt
 	);
@@ -82,7 +88,14 @@ BOOL ReadFileToBuffer(
 	PDARKMODULE pdModule
 )
 {
-	HANDLE hFile = CreateFileW(
+	HEAPALLOC pHeapAlloc = (HEAPALLOC)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "HeapAlloc");
+	CREATEFILEW pCreateFileW = (CREATEFILEW)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "CreateFileW");
+	VIRTUALALLOC pVirtualAlloc = (VIRTUALALLOC)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "VirtualAlloc");
+	GETFILESIZE pGetFileSize = (GETFILESIZE)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "GetFileSize");
+	READFILE pReadFile = (READFILE)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "ReadFile");
+	CLOSEHANDLE pCloseHandle = (CLOSEHANDLE)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "CloseHandle");
+
+	HANDLE hFile = pCreateFileW(
         pdModule->LocalDLLName,
         GENERIC_READ, 
         FILE_SHARE_READ | FILE_SHARE_WRITE, 
@@ -98,7 +111,7 @@ BOOL ReadFileToBuffer(
 		return FALSE;
     }
 
-	DWORD dwSize = GetFileSize(
+	DWORD dwSize = pGetFileSize(
 		hFile,
 		NULL
 	);
@@ -109,7 +122,7 @@ BOOL ReadFileToBuffer(
 		return FALSE;
     }
 
-	pdModule->pbDllData = VirtualAlloc(
+	pdModule->pbDllData = pVirtualAlloc(
         NULL, 
         dwSize, 
         MEM_COMMIT | MEM_RESERVE, 
@@ -122,7 +135,7 @@ BOOL ReadFileToBuffer(
 		return FALSE;
 	}
 
-	if (!ReadFile(
+	if (!pReadFile(
         hFile, 
         pdModule->pbDllData, 
         dwSize, 
@@ -133,7 +146,7 @@ BOOL ReadFileToBuffer(
 		return FALSE;
     }
 
-	if (!CloseHandle(hFile))
+	if (!pCloseHandle(hFile))
     {
         pdModule->ErrorMsg = L"Failed to close handle on DLL file";
 		return FALSE;
@@ -150,7 +163,11 @@ PDARKMODULE DarkLoadLibrary(
 	LPCWSTR lpwName
 )
 {
-	PDARKMODULE dModule = (DARKMODULE*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(DARKMODULE));
+	HEAPALLOC pHeapAlloc = (HEAPALLOC)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "HeapAlloc");
+	GETPROCESSHEAP pGetProcessHeap = (GETPROCESSHEAP)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "GetProcessHeap");
+	WCSCAT pwcscat = (WCSCAT)GetFunctionAddress(IsModulePresent(L"ucrtbased.dll"), "wcscat");
+
+	PDARKMODULE dModule = (DARKMODULE*)pHeapAlloc(pGetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(DARKMODULE));
 	if (!dModule)
 		return NULL;
 
@@ -210,36 +227,36 @@ PDARKMODULE DarkLoadLibrary(
 	// make sure the PE we are about to load is valid
 	if (!IsValidPE(dModule->pbDllData))
 	{
-		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		dModule->ErrorMsg = (wchar_t*)pHeapAlloc(pGetProcessHeap(), HEAP_ZERO_MEMORY, 500);
 		if (!dModule->ErrorMsg)
 			goto Cleanup;
 
-		wcscat(dModule->ErrorMsg, L"Data is an invalid PE: ");
-		wcscat(dModule->ErrorMsg, lpwName);
+		pwcscat(dModule->ErrorMsg, L"Data is an invalid PE: ");
+		pwcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
 	}
 
 	// map the sections into memory
 	if (!MapSections(dModule))
 	{
-		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		dModule->ErrorMsg = (wchar_t*)pHeapAlloc(pGetProcessHeap(), HEAP_ZERO_MEMORY, 500);
 		if (!dModule->ErrorMsg)
 			goto Cleanup;
 
-		wcscat(dModule->ErrorMsg, L"Failed to map sections: ");
-		wcscat(dModule->ErrorMsg, lpwName);
+		pwcscat(dModule->ErrorMsg, L"Failed to map sections: ");
+		pwcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
 	}
 
 	// handle the import tables
 	if (!ResolveImports(dModule))
 	{
-		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		dModule->ErrorMsg = (wchar_t*)pHeapAlloc(pGetProcessHeap(), HEAP_ZERO_MEMORY, 500);
 		if (!dModule->ErrorMsg)
 			goto Cleanup;
 
-		wcscat(dModule->ErrorMsg, L"Failed to resolve imports: ");
-		wcscat(dModule->ErrorMsg, lpwName);
+		pwcscat(dModule->ErrorMsg, L"Failed to resolve imports: ");
+		pwcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
 	}
 
@@ -248,12 +265,12 @@ PDARKMODULE DarkLoadLibrary(
 	{
 		if (!LinkModuleToPEB(dModule))
 		{
-			dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+			dModule->ErrorMsg = (wchar_t*)pHeapAlloc(pGetProcessHeap(), HEAP_ZERO_MEMORY, 500);
 			if (!dModule->ErrorMsg)
 				goto Cleanup;
 			
-			wcscat(dModule->ErrorMsg, L"Failed to link module to PEB: ");
-			wcscat(dModule->ErrorMsg, lpwName);
+			pwcscat(dModule->ErrorMsg, L"Failed to link module to PEB: ");
+			pwcscat(dModule->ErrorMsg, lpwName);
 			goto Cleanup;
 		}
 	}
@@ -261,12 +278,12 @@ PDARKMODULE DarkLoadLibrary(
 	// trigger tls callbacks, set permissions and call the entry point
 	if (!BeginExecution(dModule))
 	{
-		dModule->ErrorMsg = (wchar_t*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 500);
+		dModule->ErrorMsg = (wchar_t*)pHeapAlloc(pGetProcessHeap(), HEAP_ZERO_MEMORY, 500);
 		if (!dModule->ErrorMsg)
 			goto Cleanup;
 
-		wcscat(dModule->ErrorMsg, L"Failed to execute: ");
-		wcscat(dModule->ErrorMsg, lpwName);
+		pwcscat(dModule->ErrorMsg, L"Failed to execute: ");
+		pwcscat(dModule->ErrorMsg, lpwName);
 		goto Cleanup;
 	}
 

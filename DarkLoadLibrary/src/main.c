@@ -8,8 +8,11 @@ typedef DWORD (WINAPI * _ThisIsAFunction) (LPCWSTR);
 
 VOID main()
 {
+	GETPROCESSHEAP pGetProcessHeap = (GETPROCESSHEAP)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "GetProcessHeap");
+	HEAPFREE pHeapFree = (HEAPFREE)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "HeapFree");
+
 	PDARKMODULE DarkModule = DarkLoadLibrary(
-		LOAD_LOCAL_FILE | NO_LINK,
+		LOAD_LOCAL_FILE,
 		L"TestDLL.dll",
 		NULL,
 		0,
@@ -19,8 +22,8 @@ VOID main()
 	if (!DarkModule->bSuccess)
 	{
 		printf("load failed: %S\n", DarkModule->ErrorMsg);
-		HeapFree(GetProcessHeap(), 0, DarkModule->ErrorMsg);
-		HeapFree(GetProcessHeap(), 0, DarkModule);
+		pHeapFree(pGetProcessHeap(), 0, DarkModule->ErrorMsg);
+		pHeapFree(pGetProcessHeap(), 0, DarkModule);
 		return;
 	}
 
@@ -28,7 +31,7 @@ VOID main()
 		(HMODULE)DarkModule->ModuleBase,
 		"CallThisFunction"
 	);
-	HeapFree(GetProcessHeap(), 0, DarkModule);
+	pHeapFree(pGetProcessHeap(), 0, DarkModule);
 
 	if (!ThisIsAFunction)
 	{
