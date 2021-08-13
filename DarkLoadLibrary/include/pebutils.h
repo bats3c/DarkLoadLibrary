@@ -10,6 +10,14 @@
 
 typedef NTSTATUS(WINAPI* LDRGETPROCADDRESS)(HMODULE, PANSI_STRING, WORD, PVOID*);
 typedef VOID(WINAPI* RTLRBINSERTNODEEX)(_In_ PRTL_RB_TREE Tree, _In_opt_ PRTL_BALANCED_NODE Parent, _In_ BOOLEAN Right, _Out_ PRTL_BALANCED_NODE Node);
+typedef VOID(NTAPI* RTLINITUNICODESTRING)(PUNICODE_STRING DestinationString, PCWSTR SourceString);
+typedef NTSTATUS(NTAPI* NTQUERYSYSTEMTIME)(PLARGE_INTEGER SystemTime);
+typedef NTSTATUS(NTAPI* RTLHASHUNICODESTRING)(UNICODE_STRING* String, BOOLEAN CaseInSensitive, ULONG HashAlgorithm, ULONG* HashValue);
+typedef SIZE_T(NTAPI* RTLCOMPAREMEMORY)(const VOID* Source1, const VOID* Source2, SIZE_T Length);
+typedef int(__cdecl* _WCSNICMP)(const wchar_t* _Str1, const wchar_t* _Str2, size_t _MaxCount);
+typedef int(__cdecl* STRCMP)(const char* _Str1, const char* _Str2);
+typedef size_t(__cdecl* MBSTOWCS)(wchar_t* Dest, const char* _Source, size_t _MaxCount);
+typedef int(__cdecl* _WCSICMP)(const wchar_t* _Str1, const wchar_t* _Str2);
 
 #ifdef _WIN64
     #define PEB_OFFSET 0x60
@@ -36,6 +44,6 @@ NTSYSAPI VOID NTAPI RtlRbInsertNodeEx(_In_ PRTL_RB_TREE Tree, _In_opt_ PRTL_BALA
 HMODULE IsModulePresent(LPCWSTR lpwName);
 HMODULE IsModulePresentA(char* Name);
 BOOL LinkModuleToPEB(PDARKMODULE pdModule);
-FARPROC GetFunctionAddress(HMODULE hModule, char*  ProcName);
+PVOID GetFunctionAddress(HMODULE hModule, char*  ProcName);
 BOOL LocalLdrGetProcedureAddress(HMODULE hLibrary, PANSI_STRING ProcName, WORD Ordinal, PVOID* FunctionAddress);
 BOOL _LocalLdrGetProcedureAddress(HMODULE hLibrary, PANSI_STRING ProcName, WORD Ordinal, PVOID* FunctionAddress);

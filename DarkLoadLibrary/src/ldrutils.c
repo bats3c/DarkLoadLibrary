@@ -32,6 +32,8 @@ BOOL MapSections(
     PIMAGE_BASE_RELOCATION pRelocation;
     PIMAGE_SECTION_HEADER pSectionHeader;
 
+    VIRTUALALLOC pVirtualAlloc = (VIRTUALALLOC)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "VirtualAlloc");
+
     pNtHeaders = RVA(
         PIMAGE_NT_HEADERS,
         pdModule->pbDllData,
@@ -68,7 +70,7 @@ BOOL MapSections(
         return FALSE;
     }
 #else
-    pdModule->ModuleBase = (ULONG_PTR)VirtualAlloc(
+    pdModule->ModuleBase = (ULONG_PTR)pVirtualAlloc(
         (LPVOID)(pNtHeaders->OptionalHeader.ImageBase),
         (SIZE_T)pNtHeaders->OptionalHeader.SizeOfImage,
         MEM_RESERVE | MEM_COMMIT,
@@ -77,7 +79,7 @@ BOOL MapSections(
 
     if (!pdModule->ModuleBase)
     {
-        pdModule->ModuleBase = (ULONG_PTR)VirtualAlloc(
+        pdModule->ModuleBase = (ULONG_PTR)pVirtualAlloc(
             0,
             (SIZE_T)pNtHeaders->OptionalHeader.SizeOfImage,
             MEM_RESERVE | MEM_COMMIT,
@@ -167,10 +169,7 @@ BOOL ResolveImports(
     PIMAGE_THUNK_DATA pFirstThunk, pOrigFirstThunk;
     BOOL ok;
 
-    LOADLIBRARYA pLoadLibraryA = (LOADLIBRARYA)GetFunctionAddress(
-        IsModulePresentA("Kernel32.dll"),
-        "LoadLibraryA"
-    );
+    LOADLIBRARYA pLoadLibraryA = (LOADLIBRARYA)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "LoadLibraryA");
 
     STRING aString = { 0 };
 
@@ -359,6 +358,9 @@ BOOL BeginExecution(
     PIMAGE_SECTION_HEADER pSectionHeader;
     //PIMAGE_RUNTIME_FUNCTION_ENTRY pFuncEntry;
 
+    VIRTUALPROTECT pVirtualProtect = (VIRTUALPROTECT)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "VirtualProtect");
+    FLUSHINSTRUCTIONCACHE pFlushInstructionCache = (FLUSHINSTRUCTIONCACHE)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "FlushInstructionCache");
+
     DLLMAIN DllMain = NULL;
 
     pNtHeaders = RVA(
@@ -406,7 +408,7 @@ BOOL BeginExecution(
                 return FALSE;
             }
 #else
-            VirtualProtect(
+            pVirtualProtect(
                 (LPVOID)(pdModule->ModuleBase + pSectionHeader->VirtualAddress),
                 pSectionHeader->SizeOfRawData,
                 dwProtect,
@@ -417,7 +419,7 @@ BOOL BeginExecution(
     }
 
     // flush the instruction cache
-    FlushInstructionCache((HANDLE)-1, NULL, 0);
+    pFlushInstructionCache((HANDLE)-1, NULL, 0);
 
     // execute the TLS callbacks
     pDataDir = &pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS];
