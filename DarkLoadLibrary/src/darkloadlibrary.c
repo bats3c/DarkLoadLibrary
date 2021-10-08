@@ -119,6 +119,7 @@ BOOL ReadFileToBuffer(
 	if (dwSize == INVALID_FILE_SIZE)
     {
         pdModule->ErrorMsg = L"Failed to get DLL file size";
+        pCloseHandle(hFile);
 		return FALSE;
     }
 
@@ -132,6 +133,7 @@ BOOL ReadFileToBuffer(
 	if (pdModule->pbDllData == NULL)
 	{
 		pdModule->ErrorMsg = L"Failed to allocate memory for DLL data";
+		pCloseHandle(hFile);
 		return FALSE;
 	}
 
@@ -143,6 +145,9 @@ BOOL ReadFileToBuffer(
         NULL))
     {
         pdModule->ErrorMsg = L"Failed to read data from DLL file";
+        pCloseHandle(hFile);
+	// TODO: need to Free buffer on error: e.g. pVirtualFree(pdModule->pbDllData);
+	
 		return FALSE;
     }
 
