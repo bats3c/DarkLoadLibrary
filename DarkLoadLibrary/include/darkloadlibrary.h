@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <windows.h>
 
+#pragma comment(lib, "Shlwapi.lib")
+
 #define LOAD_LOCAL_FILE  0x00000001
 #define LOAD_REMOTE_FILE 0x00000002
 #define LOAD_MEMORY		 0x00000003
@@ -17,6 +19,7 @@ typedef BOOL(WINAPI* HEAPFREE)(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
 typedef void(__cdecl* _WSPLITPATH)(const wchar_t* _FullPath, wchar_t* _Drive, wchar_t* _Dir, wchar_t* _Filename, wchar_t* _Ext);
 typedef wchar_t*(_cdecl* WCSCPY)(wchar_t* Dest, const wchar_t* _Source);
 typedef wchar_t* (__cdecl* WCSCAT)(wchar_t* _dst, const wchar_t* __src);
+typedef LPCWSTR(WINAPI *PATHFINDFILENAMEW)(LPCWSTR pszPath);
 
 #pragma once
 typedef struct _DARKMODULE {

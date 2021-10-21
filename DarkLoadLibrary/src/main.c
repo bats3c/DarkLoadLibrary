@@ -13,7 +13,7 @@ VOID main()
 
 	PDARKMODULE DarkModule = DarkLoadLibrary(
 		LOAD_LOCAL_FILE,
-		L"amsi.dll",
+		L".\\amsi.dll",
 		NULL,
 		0,
 		NULL

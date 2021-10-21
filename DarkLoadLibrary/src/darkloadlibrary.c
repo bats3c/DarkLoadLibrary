@@ -42,9 +42,7 @@ BOOL ParseFileName(
 {
 	HEAPALLOC pHeapAlloc = (HEAPALLOC)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "HeapAlloc");
 	GETPROCESSHEAP pGetProcessHeap = (GETPROCESSHEAP)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "GetProcessHeap");
-	_WSPLITPATH p_wsplitpath = (_WSPLITPATH)GetFunctionAddress(IsModulePresent(L"ucrtbased.dll"), "_wsplitpath");
-	WCSCPY pwcscpy = (WCSCPY)GetFunctionAddress(IsModulePresent(L"ucrtbased.dll"), "wcscpy");
-	WCSCAT pwcscat = (WCSCAT)GetFunctionAddress(IsModulePresent(L"ucrtbased.dll"), "wcscat");
+	PATHFINDFILENAMEW pPathFindFileNameW = (PATHFINDFILENAMEW)GetFunctionAddress(IsModulePresent(L"Shlwapi.dll"), "PathFindFileNameW");
 
 	if (lpwFileName == NULL)
 	{
@@ -67,53 +65,21 @@ BOOL ParseFileName(
 		MAX_PATH * 2
 	);
 
-	PWCHAR lpwExt = (PWCHAR)pHeapAlloc(
-		hHeap,
-		HEAP_ZERO_MEMORY,
-		MAX_PATH
-	);
-
-	PWCHAR lpwFilename = (PWCHAR)pHeapAlloc(
-		hHeap,
-		HEAP_ZERO_MEMORY,
-		MAX_PATH
-	);
-
-	if (!pdModule->CrackedDLLName || !lpwExt || !lpwFilename)
+	if (!pdModule->CrackedDLLName)
 	{
 		pdModule->ErrorMsg = L"Failed to allocate memory";
 		return FALSE;
 	}
 
-	p_wsplitpath(
-        lpwFileName,
-        NULL,
-        NULL,
-        lpwFilename,
-        lpwExt
-    );
+	LPWSTR lpwFileNameLocation = pPathFindFileNameW(lpwFileName);
 
-	if (lpwFilename == NULL || lpwExt == NULL)
-	{
-		pdModule->ErrorMsg = L"Failed to crack filename";
-		return FALSE;
-	}
-
-	PCHAR lpCpy = (PCHAR)pwcscpy(
-		pdModule->CrackedDLLName,
-		lpwFilename
-	);
-    
-	PCHAR lpCat = (PCHAR)pwcscat(
-		pdModule->CrackedDLLName,
-		lpwExt
-	);
-
-	if (!lpCpy || !lpCat)
-	{
-		pdModule->ErrorMsg = L"Failed to format cracked path";
-		return FALSE;
-	}
+	/*
+		Copy the length of the filename modulo sizeof pdModule->CrackedDLLName - 1 for null byte.
+		
+		TODO:
+		Get a working wstrcpy implementation
+	*/
+	memcpy(pdModule->CrackedDLLName, lpwFileNameLocation, (WideStringLength(lpwFileNameLocation) % (MAX_PATH - 1)) * 2);
 
 	return TRUE;
 }
