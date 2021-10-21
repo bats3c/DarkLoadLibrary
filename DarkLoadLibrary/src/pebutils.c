@@ -26,8 +26,6 @@ PLDR_DATA_TABLE_ENTRY2 FindLdrTableEntry(
 	PPEB2 pPeb;
 	PLDR_DATA_TABLE_ENTRY2 pCurEntry;
 	PLIST_ENTRY pListHead, pListEntry;
-
-	_WCSNICMP p_wcsnicmp = (_WCSNICMP)GetFunctionAddress(IsModulePresent(L"ucrtbased.dll"), "_wcsnicmp");
 	
 	pPeb = (PPEB2)READ_MEMLOC(PEB_OFFSET);
 
@@ -44,10 +42,10 @@ PLDR_DATA_TABLE_ENTRY2 FindLdrTableEntry(
 		pCurEntry = CONTAINING_RECORD(pListEntry, LDR_DATA_TABLE_ENTRY2, InLoadOrderLinks);
 		pListEntry = pListEntry->Flink;
 
-		INT BaseName1 = p_wcsnicmp(BaseName, pCurEntry->BaseDllName.Buffer, (pCurEntry->BaseDllName.Length / sizeof(wchar_t)) - 4);
-		INT BaseName2 = p_wcsnicmp(BaseName, pCurEntry->BaseDllName.Buffer, pCurEntry->BaseDllName.Length / sizeof(wchar_t));
+		//BOOL BaseName1 = WideStringCompare(BaseName, pCurEntry->BaseDllName.Buffer, (pCurEntry->BaseDllName.Length / sizeof(wchar_t)) - 4);
+		BOOL BaseName2 = WideStringCompare(BaseName, pCurEntry->BaseDllName.Buffer, WideStringLength(BaseName));
 
-		if (!BaseName1 || !BaseName2)
+		if (BaseName2 == TRUE)
 		{
 			return pCurEntry;
 		}
@@ -64,6 +62,11 @@ PRTL_RB_TREE FindModuleBaseAddressIndex()
 	PRTL_BALANCED_NODE pNode = NULL;
 	PRTL_RB_TREE pModBaseAddrIndex = NULL;
 
+	/*
+		TODO: 
+		Implement these manually cause these could totally be hooked 
+		and various other reasons
+	*/
 	RTLCOMPAREMEMORY pRtlCompareMemory = (RTLCOMPAREMEMORY)GetFunctionAddress(IsModulePresent(L"ntdll.dll"), "RtlCompareMemory");
 	STRCMP pstrcmp = (STRCMP)GetFunctionAddress(IsModulePresent(L"ntdll.dll"), "strcmp");
 
@@ -307,11 +310,27 @@ HMODULE IsModulePresentA(
 	char* Name
 )
 {
-	MBSTOWCS pmbstowcs = (MBSTOWCS)GetFunctionAddress(IsModulePresent(L"ucrtbased.dll"), "mbstowcs");
+	MULTIBYTETOWIDECHAR pMultiByteToWideChar = (MULTIBYTETOWIDECHAR)GetFunctionAddress(IsModulePresent(L"kernel32.dll"), "MultiByteToWideChar");
 
-	wchar_t wtext[500];
-	pmbstowcs(wtext, Name, strlen(Name) + 1);
-	return IsModulePresent(wtext);
+	WCHAR* wideName = NULL;
+	DWORD wideNameSize = 0;
+
+	// MultiByteToWideChar returns size in characters, not bytes
+	wideNameSize = pMultiByteToWideChar(CP_UTF8, 0, Name, -1, NULL, 0) * 2;
+
+	/*
+		Attempt to allocate this on the stack, seeing as it's faster and we can attempt
+		to avoid funny shit like heap fragmentation on a simple temp var
+	*/
+	wideName = (WCHAR*)_malloca(wideNameSize);
+
+	pMultiByteToWideChar(CP_UTF8, 0, Name, -1, wideName, wideNameSize);
+
+	HMODULE hModule = IsModulePresent(wideName);
+
+	_freea(wideName);
+
+	return hModule;
 }
 
 HMODULE IsModulePresent(
@@ -336,6 +355,10 @@ HMODULE IsModulePresent(
 
 		pLdrTbl = (PLDR_DATA_TABLE_ENTRY2)ucModPtrOff;
 
+		/*
+			TODO:
+			Make this its own ANSI case-insensitive string compare function
+		*/
 		BOOL match = TRUE;
 		for (int i = 0; i < pLdrTbl->BaseDllName.Length/2; i++)
 		{

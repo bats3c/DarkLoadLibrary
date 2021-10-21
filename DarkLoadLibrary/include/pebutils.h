@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <malloc.h>
 
 #include "pebstructs.h"
 #include "darkloadlibrary.h"
@@ -16,7 +17,14 @@ typedef NTSTATUS(NTAPI* RTLHASHUNICODESTRING)(UNICODE_STRING* String, BOOLEAN Ca
 typedef SIZE_T(NTAPI* RTLCOMPAREMEMORY)(const VOID* Source1, const VOID* Source2, SIZE_T Length);
 typedef int(__cdecl* _WCSNICMP)(const wchar_t* _Str1, const wchar_t* _Str2, size_t _MaxCount);
 typedef int(__cdecl* STRCMP)(const char* _Str1, const char* _Str2);
-typedef size_t(__cdecl* MBSTOWCS)(wchar_t* Dest, const char* _Source, size_t _MaxCount);
+typedef int(WINAPI *MULTIBYTETOWIDECHAR)(
+    UINT   CodePage,
+    DWORD  dwFlags,
+    LPCCH  lpMultiByteStr,
+    int    cbMultiByte,
+    LPWSTR lpWideCharStr,
+    int    cchWideChar
+);
 typedef int(__cdecl* _WCSICMP)(const wchar_t* _Str1, const wchar_t* _Str2);
 
 #ifdef _WIN64

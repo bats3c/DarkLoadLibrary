@@ -37,3 +37,6 @@ PDARKMODULE DarkLoadLibrary(
 	DWORD   dwLen,
 	LPCWSTR lpwName
 );
+
+SIZE_T WideStringLength(LPWSTR str);
+BOOL WideStringCompare(LPWSTR lpwStr1, LPWSTR lpwStr2, SIZE_T cbMaxCount);

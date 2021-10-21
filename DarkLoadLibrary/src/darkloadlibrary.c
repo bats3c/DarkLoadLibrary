@@ -1,6 +1,40 @@
 #include "darkloadlibrary.h"
 #include "ldrutils.h"
 
+SIZE_T WideStringLength(LPWSTR str)
+{
+	SIZE_T len = 0;
+	SIZE_T i = 0;
+
+	while (str[i++])
+		++len;
+
+	return len;
+}
+
+BOOL WideStringCompare(LPWSTR lpwStr1, LPWSTR lpwStr2, SIZE_T cbMaxCount)
+{
+	BOOL match = TRUE;
+
+	for (SIZE_T i = 0; i < cbMaxCount; i++)
+	{
+		WCHAR a, b;
+		a = lpwStr1[i];
+		b = lpwStr2[i];
+		if (a >= 'A' && a <= 'Z')
+			a += 32;
+		if (b >= 'A' && b <= 'Z')
+			b += 32;
+		if (a != b)
+		{
+			match = FALSE;
+			break;
+		}
+	}
+	
+	return match;
+}
+
 BOOL ParseFileName(
 	PDARKMODULE pdModule,
 	LPWSTR lpwFileName
