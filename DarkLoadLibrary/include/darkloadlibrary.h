@@ -16,10 +16,8 @@ typedef DWORD(WINAPI* GETFILESIZE)(HANDLE hFile, LPDWORD lpFileSizeHigh);
 typedef BOOL(WINAPI* READFILE)(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped);
 typedef BOOL(WINAPI* CLOSEHANDLE)(HANDLE hObject);
 typedef BOOL(WINAPI* HEAPFREE)(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
-typedef void(__cdecl* _WSPLITPATH)(const wchar_t* _FullPath, wchar_t* _Drive, wchar_t* _Dir, wchar_t* _Filename, wchar_t* _Ext);
-typedef wchar_t*(_cdecl* WCSCPY)(wchar_t* Dest, const wchar_t* _Source);
-typedef wchar_t* (__cdecl* WCSCAT)(wchar_t* _dst, const wchar_t* __src);
 typedef LPCWSTR(WINAPI *PATHFINDFILENAMEW)(LPCWSTR pszPath);
+typedef int(__cdecl *WSPRINTFW)(LPWSTR, LPCWSTR, ...);
 
 #pragma once
 typedef struct _DARKMODULE {

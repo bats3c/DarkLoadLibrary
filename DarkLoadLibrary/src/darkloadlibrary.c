@@ -170,7 +170,16 @@ PDARKMODULE DarkLoadLibrary(
 {
 	HEAPALLOC pHeapAlloc = (HEAPALLOC)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "HeapAlloc");
 	GETPROCESSHEAP pGetProcessHeap = (GETPROCESSHEAP)GetFunctionAddress(IsModulePresent(L"Kernel32.dll"), "GetProcessHeap");
-	WCSCAT pwcscat = (WCSCAT)GetFunctionAddress(IsModulePresent(L"ucrtbased.dll"), "wcscat");
+
+	/*
+		TODO:
+		I would really love to stop using error messages that need this.
+		All the other safe versions of wsprintfW are located in the CRT,
+			which is an issue if there is no CRT in the process.
+
+		For now let us hope nobody will pass a name larger than 500 bytes. :/
+	*/
+	WSPRINTFW pwsprintfW = (WSPRINTFW)GetFunctionAddress(IsModulePresent(L"User32.dll"), "wsprintfW");
 
 	PDARKMODULE dModule = (DARKMODULE*)pHeapAlloc(pGetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(DARKMODULE));
 	if (!dModule)
@@ -217,9 +226,7 @@ PDARKMODULE DarkLoadLibrary(
 		lpwName = dModule->CrackedDLLName;
 	}
 
-	HMODULE hModule = IsModulePresent(
-		lpwName
-	);
+	HMODULE hModule = IsModulePresent(lpwName);
 
 	if (hModule != NULL)
 	{
@@ -236,8 +243,7 @@ PDARKMODULE DarkLoadLibrary(
 		if (!dModule->ErrorMsg)
 			goto Cleanup;
 
-		pwcscat(dModule->ErrorMsg, L"Data is an invalid PE: ");
-		pwcscat(dModule->ErrorMsg, lpwName);
+		pwsprintfW(dModule->ErrorMsg, TEXT("Data is an invalid PE: %s"), lpwName);
 		goto Cleanup;
 	}
 
@@ -248,8 +254,7 @@ PDARKMODULE DarkLoadLibrary(
 		if (!dModule->ErrorMsg)
 			goto Cleanup;
 
-		pwcscat(dModule->ErrorMsg, L"Failed to map sections: ");
-		pwcscat(dModule->ErrorMsg, lpwName);
+		pwsprintfW(dModule->ErrorMsg, TEXT("Failed to map sections: %s"), lpwName);
 		goto Cleanup;
 	}
 
@@ -260,8 +265,7 @@ PDARKMODULE DarkLoadLibrary(
 		if (!dModule->ErrorMsg)
 			goto Cleanup;
 
-		pwcscat(dModule->ErrorMsg, L"Failed to resolve imports: ");
-		pwcscat(dModule->ErrorMsg, lpwName);
+		pwsprintfW(dModule->ErrorMsg, TEXT("Failed to resolve imports: %s"), lpwName);
 		goto Cleanup;
 	}
 
@@ -274,8 +278,7 @@ PDARKMODULE DarkLoadLibrary(
 			if (!dModule->ErrorMsg)
 				goto Cleanup;
 			
-			pwcscat(dModule->ErrorMsg, L"Failed to link module to PEB: ");
-			pwcscat(dModule->ErrorMsg, lpwName);
+			pwsprintfW(dModule->ErrorMsg, TEXT("Failed to link module to PEB: %s"), lpwName);
 			goto Cleanup;
 		}
 	}
@@ -287,8 +290,7 @@ PDARKMODULE DarkLoadLibrary(
 		if (!dModule->ErrorMsg)
 			goto Cleanup;
 
-		pwcscat(dModule->ErrorMsg, L"Failed to execute: ");
-		pwcscat(dModule->ErrorMsg, lpwName);
+		pwsprintfW(dModule->ErrorMsg, TEXT("Failed to execute: %s"), lpwName);
 		goto Cleanup;
 	}
 
